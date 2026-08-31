@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "personal-finance",
+    "slug": "personal-finance",
+    "scheme": "personalfinance",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "web": { "bundler": "metro", "output": "single" },
+    "plugins": ["expo-router"]
+  }
+}
