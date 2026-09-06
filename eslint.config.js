@@ -16,6 +16,12 @@ module.exports = defineConfig([
       // poison guard has something to observe. Linting code written to be
       // broken reports on the intent, not on a defect.
       'test-fixtures/*',
+      // Written by `npm run e2e`, and full of bundled JavaScript. .gitignore
+      // covers both, but ESLint 9's flat config does not read .gitignore - so
+      // without these `npm run lint` passes or fails depending on whether e2e
+      // happened to run first.
+      'playwright-report/*',
+      'test-results/*',
     ],
   },
 ]);
