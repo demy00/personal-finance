@@ -21,13 +21,17 @@ function isExempt(file: string, exempt: readonly string[]): boolean {
  * a file added but not yet committed is still guarded.
  */
 export function listSourceFiles(repoRoot: string, exempt: readonly string[]): string[] {
-  const out = execFileSync('git', ['ls-files', '-co', '--exclude-standard'], {
+  // -z is what keeps the guard honest about its own input: without it git
+  // C-quotes any path holding a non-ASCII byte, so `app/árak.tsx` arrives as
+  // `"app/\303\241rak.tsx"` - a name ending in `"` that the extension filter
+  // drops, silently leaving the file unguarded. NUL-separated output is verbatim,
+  // which also means a path may legitimately start or end with a space.
+  const out = execFileSync('git', ['ls-files', '-co', '-z', '--exclude-standard'], {
     cwd: repoRoot,
     encoding: 'utf8',
   });
   return out
-    .split('\n')
-    .map((l) => l.trim())
+    .split('\0')
     .filter((f) => SOURCE_FILE.test(f))
     .filter((f) => !isExempt(f, exempt));
 }
@@ -47,7 +51,14 @@ export function readListedFile(repoRoot: string, file: string): string | undefin
   }
 }
 
-/** The listed files whose contents match `pattern`. */
+/**
+ * The listed files whose contents match `pattern`.
+ *
+ * Matching goes through `String.prototype.search`, which ignores and preserves
+ * `lastIndex`. `pattern.test` would not: a caller passing a `/g` or `/y` regex
+ * would have each match resume from where the last one ended, dropping offenders
+ * from a guard without any error.
+ */
 export function findMatchingFiles(
   repoRoot: string,
   files: readonly string[],
@@ -55,6 +66,6 @@ export function findMatchingFiles(
 ): string[] {
   return files.filter((f) => {
     const text = readListedFile(repoRoot, f);
-    return text !== undefined && pattern.test(text);
+    return text !== undefined && text.search(pattern) !== -1;
   });
 }

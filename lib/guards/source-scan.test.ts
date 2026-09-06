@@ -28,6 +28,17 @@ describe('source scan', () => {
     }
   });
 
+  it('lists a source file whose name git would C-quote', () => {
+    const rel = path.join('lib', 'guards', 'source-scan-árak-fixture.ts');
+    const abs = path.join(repoRoot, rel);
+    fs.writeFileSync(abs, 'export const nonAscii = true;\n');
+    try {
+      expect(listSourceFiles(repoRoot, [])).toContain(rel);
+    } finally {
+      fs.rmSync(abs, { force: true });
+    }
+  });
+
   it('skips a listed path that vanished before the read', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'source-scan-'));
     try {
@@ -38,6 +49,21 @@ describe('source scan', () => {
       fs.rmSync(path.join(dir, 'vanishing.ts'));
 
       expect(findMatchingFiles(dir, listed, MARKER)).toEqual(['present.ts']);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('finds every match when the caller supplies a global pattern', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'source-scan-'));
+    try {
+      fs.writeFileSync(path.join(dir, 'a.ts'), '// SOURCE_SCAN_FIXTURE_MARKER\n');
+      fs.writeFileSync(path.join(dir, 'b.ts'), '// SOURCE_SCAN_FIXTURE_MARKER\n');
+
+      expect(findMatchingFiles(dir, ['a.ts', 'b.ts'], /SOURCE_SCAN_FIXTURE_MARKER/g)).toEqual([
+        'a.ts',
+        'b.ts',
+      ]);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
