@@ -243,8 +243,9 @@ These are settled with me, not by whoever hits them first. If a task requires on
 
 ## Learnings
 
-<!-- Append when something goes wrong. Write the lesson here rather than having me fix it
-     silently - this file is how the next session starts smarter than this one did. -->
+<!-- When something goes wrong, write the lesson here rather than having me fix it silently -
+     this file is how the next session starts smarter than this one did. How to write one:
+     `## Maintaining this file`. -->
 
 - **This stack's characteristic failure is a promise that never settles, not a throw.** A wasm asset
   failed to resolve, `openDatabaseAsync()` neither resolved nor rejected, and the page sat on loading
