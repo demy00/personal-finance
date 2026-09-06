@@ -52,20 +52,25 @@ export function readListedFile(repoRoot: string, file: string): string | undefin
 }
 
 /**
- * The listed files whose contents match `pattern`.
+ * The listed files whose contents match `pattern` anywhere.
  *
- * Matching goes through `String.prototype.search`, which ignores and preserves
- * `lastIndex`. `pattern.test` would not: a caller passing a `/g` or `/y` regex
- * would have each match resume from where the last one ended, dropping offenders
- * from a guard without any error.
+ * `g` and `y` are dropped first, because both carry a match position and this
+ * helper's question has none: `/g` makes each match resume from where the last
+ * one ended, and `/y` anchors every match at offset 0. Either would answer a
+ * different question than "does this file contain it" and drop real offenders
+ * from a guard without raising anything.
  */
 export function findMatchingFiles(
   repoRoot: string,
   files: readonly string[],
   pattern: RegExp
 ): string[] {
+  const anywhere =
+    pattern.global || pattern.sticky
+      ? new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, ''))
+      : pattern;
   return files.filter((f) => {
     const text = readListedFile(repoRoot, f);
-    return text !== undefined && text.search(pattern) !== -1;
+    return text !== undefined && anywhere.test(text);
   });
 }

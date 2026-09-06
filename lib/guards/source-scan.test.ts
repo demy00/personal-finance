@@ -69,6 +69,21 @@ describe('source scan', () => {
     }
   });
 
+  it('finds a match past offset 0 when the caller supplies a sticky pattern', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'source-scan-'));
+    try {
+      fs.writeFileSync(path.join(dir, 'a.ts'), '// SOURCE_SCAN_FIXTURE_MARKER\n');
+      fs.writeFileSync(path.join(dir, 'b.ts'), '// SOURCE_SCAN_FIXTURE_MARKER\n');
+
+      expect(findMatchingFiles(dir, ['a.ts', 'b.ts'], /SOURCE_SCAN_FIXTURE_MARKER/y)).toEqual([
+        'a.ts',
+        'b.ts',
+      ]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('still fails loudly on a read error that is not a vanished path', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'source-scan-'));
     try {
