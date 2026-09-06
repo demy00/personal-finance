@@ -1,0 +1,7 @@
+# This repository has no CI: there is no workflow file and no checks register
+# on a pull request. Declaring it here tells the validation pipeline the truth
+# so it reports "no checks configured" instead of waiting indefinitely for
+# results that can never arrive.
+#
+# Remove this line the day real checks exist, or they will be skipped.
+no_ci: true
