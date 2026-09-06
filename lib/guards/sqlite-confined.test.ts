@@ -1,6 +1,7 @@
-import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+
+import { findMatchingFiles, listSourceFiles } from './source-scan';
 
 // The poison only fires for code a jest suite imports. A route nothing unit-tests
 // could still reach expo-sqlite, so this reads the source tree as text instead -
@@ -26,34 +27,21 @@ const REACHES =
   /(?:\bfrom\s*|\brequire\s*\(\s*|\bimport\s*\(\s*)['"]expo-sqlite(?:\/[^'"]*)?['"]/;
 
 function trackedSourceFiles(): string[] {
-  const out = execFileSync('git', ['ls-files', '-co', '--exclude-standard'], {
-    cwd: repoRoot,
-    encoding: 'utf8',
-  });
-  return out
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((f) => /\.(ts|tsx|js|jsx)$/.test(f))
-    .filter((f) => !EXEMPT.some((e) => (e.endsWith('/') ? f.startsWith(e) : f === e)));
+  return listSourceFiles(repoRoot, EXEMPT);
 }
 
 describe('expo-sqlite is confined to lib/db/', () => {
   it('no source file outside lib/db/ reaches it', () => {
     const files = trackedSourceFiles();
     expect(files.length).toBeGreaterThan(0);
-    const offenders = files.filter((f) =>
-      REACHES.test(fs.readFileSync(path.join(repoRoot, f), 'utf8'))
-    );
-    expect(offenders).toEqual([]);
+    expect(findMatchingFiles(repoRoot, files, REACHES)).toEqual([]);
   });
 
   it('catches a violation planted in a scanned file', () => {
     const planted = path.join(repoRoot, 'lib', 'planted-violation.ts');
     fs.writeFileSync(planted, "export { openDatabaseAsync } from 'expo-sqlite/next';\n");
     try {
-      const offenders = trackedSourceFiles().filter((f) =>
-        REACHES.test(fs.readFileSync(path.join(repoRoot, f), 'utf8'))
-      );
+      const offenders = findMatchingFiles(repoRoot, trackedSourceFiles(), REACHES);
       expect(offenders).toContain(path.join('lib', 'planted-violation.ts'));
     } finally {
       fs.rmSync(planted, { force: true });
