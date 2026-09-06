@@ -52,6 +52,27 @@ function collectedFiles(): string[] {
   return listed.suites.map((suite) => path.resolve(listed.config.rootDir, suite.file));
 }
 
+// Holds the port for the duration of a check. A null result means something else
+// already holds it, which is the same precondition by another route - so the
+// caller proceeds either way rather than failing because a dev server is up.
+function occupy(port: number): Promise<net.Server | null> {
+  return new Promise((resolve) => {
+    const server = net.createServer((socket) => socket.destroy());
+    server.once('error', () => resolve(null));
+    server.listen(port, '127.0.0.1', () => resolve(server));
+  });
+}
+
+function release(server: net.Server | null): Promise<void> {
+  return new Promise((resolve) => {
+    if (!server) {
+      resolve();
+      return;
+    }
+    server.close(() => resolve());
+  });
+}
+
 function isListening(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = net.connect({ port, host: '127.0.0.1' });
@@ -85,13 +106,29 @@ describe('playwright never collects anything outside e2e/', () => {
     }
   });
 
-  // This check binds `integration` and therefore runs inside `npm test`. Starting
-  // a server here would collide with the config's refusal to reuse one, and would
-  // make `npm test` fail whenever a dev server is already up.
-  it('lists without starting a web server or binding the port', async () => {
-    const before = await isListening(8081);
-    collectedFiles();
-    const after = await isListening(8081);
-    expect(after).toBe(before);
+  // This check binds `integration` and therefore runs inside `npm test`, so
+  // `npm test` has to pass unchanged with a dev server already on 8081. The port
+  // is held for real rather than merely observed: reading the port before and
+  // after proves nothing on its own, because the listing has fully exited by the
+  // time it is read and Playwright tears down anything it started on exit. Held,
+  // the claim is falsifiable - the config refuses to reuse an existing server, so
+  // a listing that tried to start one would exit non-zero on the used port.
+  it('lists unchanged with a server already listening on 8081', async () => {
+    const baseline = collectedFiles();
+    expect(baseline.length).toBeGreaterThan(0);
+
+    const held = await occupy(8081);
+    try {
+      const before = await isListening(8081);
+      expect(before).toBe(true);
+
+      const collected = collectedFiles();
+
+      const after = await isListening(8081);
+      expect(collected).toEqual(baseline);
+      expect(after).toBe(before);
+    } finally {
+      await release(held);
+    }
   });
 });
