@@ -73,7 +73,8 @@ rather than absorb it.
 - typecheck: `npm run typecheck` - `tsc --noEmit`
 - source:   `app/`, `components/`, `features/`, `lib/`
 - tests:    colocated with the code, `*.test.ts(x)`. **`e2e/` belongs to Playwright and is
-            excluded from jest's roots** - the two runners must never claim the same file.
+            excluded from jest's collection** via `testPathIgnorePatterns` in `jest.config.js` - the
+            two runners must never claim the same file.
             Platform-suffixed variants (`.test.web.tsx`, `.test.ios.tsx`, `.test.native.tsx`,
             `.test.node.ts`) only where behaviour genuinely diverges - a suffixed file is a
             claim that the platforms differ
@@ -141,8 +142,7 @@ on disk. Do not build against them without checking:
   opened on any platform. One route renders a frozen in-memory fixture,
   `lib/fixtures/transactions.ts`.
 - *"Both engines have fakes, and the fakes are what you drive"* - **not yet true.** Neither the OCR
-  nor the categoriser engine exists yet, in any form. `## Conventions` makes the same claim about
-  three engines; bank sync has since been cut from the plan.
+  nor the categoriser engine exists yet, in any form.
 - *"An empty state and a failed read must be distinguishable in the UI"*, which is stated in
   `## Conventions` rather than here - **not yet true**, and narrower than the distinction that
   matters. A read that never settles, an empty result and a failed read are three different
@@ -189,11 +189,11 @@ unverified" field and needs a device check before it ships:
   yet. Until there is, totals are per-currency; a mixed-currency sum is not a rounding question,
   it is a wrong number.
 - Dates are ISO 8601 strings at rest, parsed at the edges only.
-- **Three things sit behind an interface with a fake implementation**, and the fakes are what tests
-  run against: **bank sync**, the **OCR engine**, and the **categoriser engine**. Each is chosen at
-  runtime by configuration. Cloud today; a local model or a personal AI subscription later must be
-  a config change, not a rewrite. No real bank integration exists yet and none should be added
-  without asking - see `## Escalate`.
+- **Two things sit behind an interface with a fake implementation**, and the fakes are what tests
+  run against: the **OCR engine** and the **categoriser engine**. Each is chosen at runtime by
+  configuration. Cloud today; a local model or a personal AI subscription later must be a config
+  change, not a rewrite. How transactions arrive is deliberately still open - see
+  `## Open questions`.
 - **The categoriser is a cache with a model at its edge.** A persisted item->category mapping is
   consulted first; only a miss calls the model, and the result is written back. The deterministic
   path is the tested one. The cache key must be **stable, not correct** - if OCR consistently
@@ -224,8 +224,8 @@ unverified" field and needs a device check before it ships:
 
 - Any user-visible copy or UX change not specified in the task
 - Schema changes, including migrations
-- The shape of the bank-sync, OCR and categoriser interfaces, and anything that would make a real
-  call to any of them
+- The shape of the OCR and categoriser interfaces, and anything that would make a real call to
+  either of them
 - **Anything that widens `## What leaves the device`**
 - Anything that would break Expo Go, or require a dev build
 - Anything that changes what the product does, vs. how it does it
