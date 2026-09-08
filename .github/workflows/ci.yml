@@ -64,3 +64,15 @@ jobs:
       # `webServer` with `reuseExistingServer: false`, so it brings up Metro on
       # :8081 itself and fails if anything is already there.
       - run: npm run e2e
+      # Only on failure, and only then does `test-results/` contain anything:
+      # playwright.config.ts captures trace, screenshot and video on failure and
+      # nothing on a pass. This is the diagnosis surface for a web-only failure
+      # that does not reproduce locally - open the trace with
+      # `npx playwright show-trace`.
+      - if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-failure-artifacts
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
