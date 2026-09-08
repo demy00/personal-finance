@@ -79,6 +79,10 @@ rather than absorb it.
             `.test.node.ts`) only where behaviour genuinely diverges - a suffixed file is a
             claim that the platforms differ
 - mutation: `none`
+- CI:       `.github/workflows/ci.yml` runs exactly the four commands above - lint, typecheck,
+            `npm test`, then `npm run e2e` in a second job - on every pull request to `main`.
+            A check that diverges from what `npm run ...` does locally is a check about
+            something other than this repo, so change both together
 
 **If a command above does not exist yet, that is a defect in the repo, not a licence to guess a
 different one.** Add the script, or stop and say so.

@@ -1,0 +1,66 @@
+# The repository's own pipeline, run on every pull request to main. The four
+# steps are the ones AGENTS.md names under `## Pipeline`, run with the same
+# commands a human would run locally - a check that diverges from `npm run ...`
+# is a check about something other than this repo.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# A second push to a pull request makes the first run's answer stale, not
+# interesting.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Pinned to the patch. setup-node resolves this against the Node distribution
+  # rather than whatever the runner image happens to ship, so the version cannot
+  # drift under the workflow.
+  NODE_VERSION: 22.22.3
+
+jobs:
+  checks:
+    name: lint, typecheck, unit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      # `npm ci` and not `npm install`: the lockfile is what pins every tool
+      # below, including the Playwright version the e2e job installs a browser
+      # for.
+      - run: npm ci
+      # The trailing `.` is load-bearing - `expo lint` with no path lints only
+      # `app/`. See AGENTS.md `## Learnings`.
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+
+  e2e:
+    name: e2e (web)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      # Chromium only: playwright.config.ts declares no other project. The
+      # browser build is chosen by the Playwright version in the lockfile.
+      - run: npx playwright install --with-deps chromium
+      # No server is started first, deliberately. playwright.config.ts owns
+      # `webServer` with `reuseExistingServer: false`, so it brings up Metro on
+      # :8081 itself and fails if anything is already there.
+      - run: npm run e2e
