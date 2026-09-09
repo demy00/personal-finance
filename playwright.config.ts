@@ -31,6 +31,15 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:8081',
     viewport: { width: 1280, height: 900 },
+
+    // Failure-only capture, written to `test-results/`. A passing run produces
+    // nothing, so the local loop stays cheap; a headless CI failure that does
+    // not reproduce on a laptop is otherwise only a line of reporter stdout.
+    // `retain-on-failure` and not `on-first-retry`: `retries` is 0 above, so a
+    // retry-keyed setting would never capture anything at all.
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
   },
 
   // Chromium is the only browser the suite requires.
